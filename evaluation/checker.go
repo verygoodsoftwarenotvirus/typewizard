@@ -1,4 +1,4 @@
-package continuity
+package evaluation
 
 import (
 	"fmt"
@@ -181,4 +181,34 @@ func compareFields(a, b *models.StructField) []FieldDifference {
 	}
 
 	return diffs
+}
+
+type StructPair struct {
+	A *models.Struct
+	B *models.Struct
+}
+
+func FindMatchingTypePairs(mapA, mapB models.MapCollection[string, *models.Struct]) models.ListCollection[*StructPair] {
+	var pairs models.ListCollection[*StructPair]
+
+	for typeName, structA := range mapA {
+		if structB, exists := mapB[typeName]; exists {
+			if structsEqual(structA, structB) {
+				pairs = append(pairs, &StructPair{A: structA, B: structB})
+			}
+		}
+	}
+
+	return pairs
+}
+
+func structsEqual(a, b *models.Struct) bool {
+	if a.Name != b.Name {
+		return false
+	}
+
+	return a.Fields.EqualTo(b.Fields, func(x, y *models.StructField) bool {
+		result := x.Equal(y)
+		return result
+	})
 }

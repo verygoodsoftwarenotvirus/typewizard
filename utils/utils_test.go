@@ -17,6 +17,11 @@ func Test_getTypesForPackage(T *testing.T) {
 		expected := models.MapCollection[string, *models.Struct]{
 			"ThingOne": &models.Struct{
 				Name: "ThingOne",
+				Package: models.Package{
+					Name:  "a",
+					Path:  "typewizard/utils/test_packages/example/a",
+					Alias: "",
+				},
 				Fields: models.ListCollection[*models.StructField]{
 					{
 						Name:      "Name",
