@@ -20,9 +20,9 @@ func WriteConversionFunctionForTypes(typeA, typeB *models.Struct) string {
 		importBlock.WriteString("import (\n")
 		for _, pkg := range imports {
 			if pkg.Alias != "" {
-				importBlock.WriteString(fmt.Sprintf("\t%s \"%s\"\n", pkg.Alias, pkg.Path))
+				importBlock.WriteString(fmt.Sprintf("\t%s %q\n", pkg.Alias, pkg.Path))
 			} else {
-				importBlock.WriteString(fmt.Sprintf("\t\"%s\"\n", pkg.Path))
+				importBlock.WriteString(fmt.Sprintf("\t%q\n", pkg.Path))
 			}
 		}
 		importBlock.WriteString(")\n\n")
