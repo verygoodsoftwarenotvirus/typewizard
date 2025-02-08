@@ -5,9 +5,16 @@ import (
 	"sort"
 )
 
+type Package struct {
+	Path  string
+	Alias string
+	Name  string
+}
+
 type Struct struct {
-	Name   string
-	Fields ListCollection[*StructField]
+	Name    string
+	Package Package
+	Fields  ListCollection[*StructField]
 }
 
 type StructField struct {

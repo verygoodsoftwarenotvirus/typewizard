@@ -49,7 +49,11 @@ func GetTypesForPackage(packagePath, packageName string, nameFilter func(string)
 							return true
 						}
 						output[t.Name.Name] = &models.Struct{
-							Name:   t.Name.Name,
+							Name: t.Name.Name,
+							Package: models.Package{
+								Path: pkg.PkgPath,
+								Name: pkg.Name,
+							},
 							Fields: GetFieldsForStruct(pkg.TypesInfo, structType),
 						}
 					}
