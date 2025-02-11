@@ -118,22 +118,23 @@ func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) []*mod
 				sf.Type = "[]" + elem.Name()
 				sf.BasicType = true
 			case *types.Pointer:
-				if namedElem, ok := elem.Elem().(*types.Named); ok {
-					sf.Type = "[]*" + namedElem.Obj().Name()
-					if pkg := namedElem.Obj().Pkg(); pkg != nil {
+				switch e := elem.Elem().(type) {
+				case *types.Named:
+					sf.Type = "[]*" + e.Obj().Name()
+					if pkg := e.Obj().Pkg(); pkg != nil {
 						sf.TypePackage = pkg.Name()
 						sf.TypePackagePath = pkg.Path()
 						sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
 					}
-				} else if basicElem, ok := elem.Elem().(*types.Basic); ok {
-					sf.Type = "[]*" + basicElem.Name()
+				case *types.Basic:
+					sf.Type = "[]*" + e.Name()
 					sf.BasicType = true
 				}
 			default:
 				sf.Type = "[]" + types.TypeString(elemType, nil)
 			}
 		case *types.Map:
-			// sf.IsMap = true
+			// you could do something like sf.IsMap = true here
 			keyType := t.Key()
 			elemType := t.Elem()
 
@@ -149,7 +150,7 @@ func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) []*mod
 					sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
 				}
 			case *types.Pointer:
-				if namedElem, ok := elem.Elem().(*types.Named); ok {
+				if namedElem, ok2 := elem.Elem().(*types.Named); ok2 {
 					if pkg := namedElem.Obj().Pkg(); pkg != nil {
 						sf.TypePackage = pkg.Name()
 						sf.TypePackagePath = pkg.Path()
@@ -165,8 +166,8 @@ func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) []*mod
 	return structFields
 }
 
-func getTypeString(t types.Type) string {
-	switch t := t.(type) {
+func getTypeString(typ types.Type) string {
+	switch t := typ.(type) {
 	case *types.Named:
 		return t.Obj().Name()
 	case *types.Basic:
