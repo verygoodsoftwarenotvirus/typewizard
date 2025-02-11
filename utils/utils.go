@@ -67,7 +67,7 @@ func GetTypesForPackage(packagePath, packageName string, nameFilter func(string)
 }
 
 // GetFieldsForStruct extracts fields with proper import path resolution.
-func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) models.ListCollection[*models.StructField] {
+func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) []*models.StructField {
 	var structFields models.ListCollection[*models.StructField]
 
 	for _, field := range structType.Fields.List {
@@ -76,13 +76,11 @@ func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) models
 			sf.Name = field.Names[0].Name
 		}
 
-		// Get type information from type-checker
 		tv, ok := typeInfo.Types[field.Type]
 		if !ok {
 			continue
 		}
 
-		// Handle different type cases
 		switch t := tv.Type.(type) {
 		case *types.Named:
 			sf.Type = t.Obj().Name()
@@ -95,6 +93,7 @@ func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) models
 			sf.Type = t.Name()
 			sf.BasicType = true
 		case *types.Pointer:
+			sf.IsPointer = true
 			if named, ok2 := t.Elem().(*types.Named); ok2 {
 				sf.Type = "*" + named.Obj().Name()
 				if pkg := named.Obj().Pkg(); pkg != nil {
@@ -103,12 +102,85 @@ func GetFieldsForStruct(typeInfo *types.Info, structType *ast.StructType) models
 					sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
 				}
 			}
+		case *types.Slice:
+			sf.IsSlice = true
+			elemType := t.Elem()
+
+			switch elem := elemType.(type) {
+			case *types.Named:
+				sf.Type = "[]" + elem.Obj().Name()
+				if pkg := elem.Obj().Pkg(); pkg != nil {
+					sf.TypePackage = pkg.Name()
+					sf.TypePackagePath = pkg.Path()
+					sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
+				}
+			case *types.Basic:
+				sf.Type = "[]" + elem.Name()
+				sf.BasicType = true
+			case *types.Pointer:
+				switch e := elem.Elem().(type) {
+				case *types.Named:
+					sf.Type = "[]*" + e.Obj().Name()
+					if pkg := e.Obj().Pkg(); pkg != nil {
+						sf.TypePackage = pkg.Name()
+						sf.TypePackagePath = pkg.Path()
+						sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
+					}
+				case *types.Basic:
+					sf.Type = "[]*" + e.Name()
+					sf.BasicType = true
+				}
+			default:
+				sf.Type = "[]" + types.TypeString(elemType, nil)
+			}
+		case *types.Map:
+			// you could do something like sf.IsMap = true here
+			keyType := t.Key()
+			elemType := t.Elem()
+
+			keyTypeStr := getTypeString(keyType)
+			elemTypeStr := getTypeString(elemType)
+			sf.Type = fmt.Sprintf("map[%s]%s", keyTypeStr, elemTypeStr)
+
+			switch elem := elemType.(type) {
+			case *types.Named:
+				if pkg := elem.Obj().Pkg(); pkg != nil {
+					sf.TypePackage = pkg.Name()
+					sf.TypePackagePath = pkg.Path()
+					sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
+				}
+			case *types.Pointer:
+				if namedElem, ok2 := elem.Elem().(*types.Named); ok2 {
+					if pkg := namedElem.Obj().Pkg(); pkg != nil {
+						sf.TypePackage = pkg.Name()
+						sf.TypePackagePath = pkg.Path()
+						sf.FromStandardLibrary = isStdlibPkg(pkg.Path())
+					}
+				}
+			}
 		}
 
 		structFields = append(structFields, sf)
 	}
 
 	return structFields
+}
+
+func getTypeString(typ types.Type) string {
+	switch t := typ.(type) {
+	case *types.Named:
+		return t.Obj().Name()
+	case *types.Basic:
+		return t.Name()
+	case *types.Pointer:
+		return "*" + getTypeString(t.Elem())
+	case *types.Slice:
+		return "[]" + getTypeString(t.Elem())
+	case *types.Map:
+		return fmt.Sprintf("map[%s]%s", getTypeString(t.Key()), getTypeString(t.Elem()))
+	default:
+		return types.TypeString(t, nil)
+	}
 }
 
 var (
