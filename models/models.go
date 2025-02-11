@@ -25,6 +25,8 @@ type StructField struct {
 	Type                string
 	BasicType           bool
 	FromStandardLibrary bool
+	IsSlice             bool
+	IsPointer           bool
 }
 
 func (f *StructField) Equal(f2 *StructField) bool {
